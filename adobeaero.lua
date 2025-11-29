@@ -149,7 +149,7 @@ allowed = function(url, parenturl)
 
   if ids[url]
     or (noscheme and ids[string.lower(noscheme)])
-    or string.match(url, "^https?://[^/]*data%.adobe%.io/.") then
+    or string.match(url, "^https?://[^/]*data[^/]*%.adobe%.io/.") then
     return true
   end
 
@@ -430,11 +430,44 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
+  local function process_manifest(manifest, path)
+    local version = string.match(url, "([0-9]+)$")
+    path = path or ""
+    if manifest["path"] then
+      path = path .. "/" .. manifest["path"]
+    end
+    local paths = {}
+    if manifest["components"] then
+      for _, d in pairs(manifest["components"]) do
+        local new = path .. "/" .. d["path"]
+        if string.match(new, "^/") then
+          new = string.match(new, "^/(.+)$")
+        end
+        table.insert(paths, new)
+      end
+    end
+    if manifest["children"] then
+      for _, d in pairs(manifest["children"]) do
+        process_manifest(d, path)
+      end
+    end
+    for newurl, _ in pairs(context["templates"]) do
+      queue_template(newurl, join_tables(
+        context["default_params"],
+        {
+          ["version"] = version,
+          ["path"] = paths
+        }
+      ))
+    end
+  end
+
   if allowed(url)
     and status_code < 300
     and item_type ~= "asset"
     and not string.match(url, "^https?://cdn%.cp%.adobe%.io/.-/path/")
-    and not string.match(url, "^https?://[^/]*data%.adobe%.io/.") then
+    and not string.match(url, "^https?://cdn%.cp%.adobe%.io/content/2/dcx/[^/]+/content/[A-Z]")
+    and not string.match(url, "^https?://[^/]*data[^/]*%.adobe%.io/.") then
     html = read_file(file)
     if string.match(url, "/api/v2/aero/assets/[^/]-%?") then
       json = cjson.decode(html)
@@ -450,9 +483,14 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       for i = 0, tonumber(json["version"]) do
         table.insert(context["default_params"]["version"], tostring(i))
       end
+      local found_content = false
       for _, d in pairs(json["_links"]) do
         if string.match(d["href"], "{") then
           context["ignore"][d["href"]] = true
+        end
+        if string.match(d["href"], "^https?://cdn%.cp%.adobe%.io/content/2/dcx/[^/]+/content$") then
+          found_content = true
+          context["templates"][d["href"] .. "/{path}"] = true
         end
         local newurl = string.gsub(d["href"], "/version/[0-9]+", "/version/{version}")
         if string.match(newurl, "{")
@@ -465,30 +503,16 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
           end
         end
       end
+      if not found_content then
+        error("Could not find https://cdn.cp.adobe.io/content/2/dcx/[...]/content URL.")
+      end
     end
     if string.match(url, "/content/2/dcx/[0-9a-f%-]+/content/manifest/version/[0-9]+$") then
       json = cjson.decode(html)
-      local version = string.match(url, "([0-9]+)$")
-      local paths = {}
-      for _, d in pairs(json["components"]) do
-        table.insert(paths, d["path"])
+      if json["type"] ~= "application/vnd.adobe.real+dcx" then
+        error("Found unsupported type " .. json["type"] .. ".")
       end
-      if json["children"] then
-        for _, d in pairs(json["children"]) do
-          for _, d2 in pairs(d["components"]) do
-            table.insert(paths, d["path"] .. "/" .. d2["path"])
-          end
-        end
-      end
-      for newurl, _ in pairs(context["templates"]) do
-        queue_template(newurl, join_tables(
-          context["default_params"],
-          {
-            ["version"] = version,
-            ["path"] = paths
-          }
-        ))
-      end
+      process_manifest(json)
     end
     for newurl in string.gmatch(string.gsub(html, "&[qQ][uU][oO][tT];", '"'), '([^"]+)') do
       checknewurl(newurl)
@@ -607,6 +631,9 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
 
   if status_code >= 300 and status_code <= 399 then
     local newloc = urlparse.absolute(url["url"], http_stat["newloc"])
+    if status_code == 307 and item_type == "api-asset" and not allowed(newloc) then
+      error("Data URL " .. newloc .. " should have been accepted.")
+    end
     if processed(newloc) or not allowed(newloc, url["url"]) then
       tries = 0
       return wget.actions.EXIT
