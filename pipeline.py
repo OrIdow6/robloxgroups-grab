@@ -268,6 +268,14 @@ class WgetArgs(object):
             elif item_type == 'group-shout':
                 wget_args.extend(['--warc-header', 'robloxgroups-api-shout: '+item_value])
                 wget_args.append('https://apis.roblox.com/community-links/v1/groups/{}/shout'.format(item_value))
+            elif item_type == 'group-namehistory':
+                group_id, cursor = item_value.split(':', 1)
+                wget_args.extend(['--warc-header', 'robloxgroups-api-namehistory: '+item_value])
+
+                if len(cursor) > 0:
+                    wget_args.append('https://groups.roblox.com/v1/groups/{}/name-history?limit=100&cursor={}&sortOrder=Asc'.format(group_id, cursor))
+                else:
+                    wget_args.append('https://groups.roblox.com/v1/groups/{}/name-history?limit=100&sortOrder=Asc'.format(group_id))
             elif item_type == 'group-members':
                 group_id, cursor = item_value.split(':', 1)
                 wget_args.extend(['--warc-header', 'robloxgroups-api-member: '+item_value])
