@@ -262,20 +262,33 @@ class WgetArgs(object):
             wget_args.extend(['--warc-header', 'x-wget-at-project-item-name: '+item_name])
             wget_args.append('item-name://'+item_name)
             item_type, item_value = item_name.split(':', 1)
-            if item_type == 'api-user':
-                wget_args.extend(['--warc-header', 'adobeaero-api-user: '+item_value])
+            if item_type == 'group-meta':
+                wget_args.extend(['--warc-header', 'robloxgroups-api-group: '+item_value])
                 wget_args.append('https://cc-api-cp.adobe.io/api/v2/aero/users/{}?api_key=Aero_Content_Service1'.format(item_value))
-            elif item_type == 'api-asset':
-                requests.get('https://cdn.cp.adobe.io/content/2/dcx/{}/content/manifest/version/head'.format(item_value))
-                wget_args.extend(['--warc-header', 'adobeaero-api-asset: '+item_value])
-                wget_args.append('https://cc-api-cp.adobe.io/api/v2/aero/assets/{}?api_key=Aero_Content_Service1'.format(item_value))
+            elif item_type == 'group-members':
+                group_id, cursor = item_value.split(':', 1)
+                wget_args.extend(['--warc-header', 'robloxgroups-api-member: '+item_value])
+
+                if len(cursor) > 0:
+                    wget_args.append('https://groups.roblox.com/v1/groups/{}/users?limit=100&cursor={}&sortOrder=Asc'.format(item_value))
+                else:
+                    wget_args.append('https://groups.roblox.com/v1/groups/{}/users?limit=100&sortOrder=Asc'.format(item_value))
+            elif item_type == 'group-wall':
+                group_id, cursor = item_value.split(':', 1)
+                # requests.get('https://cdn.cp.adobe.io/content/2/dcx/{}/content/manifest/version/head'.format(item_value))
+                wget_args.extend(['--warc-header', 'robloxgroups-api-wall: '+item_value])
+
+                if len(cursor) > 0:
+                    wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&cursor={cursor}&sortOrder=Asc'.format(group_id, cursor))
+                else:
+                    wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&sortOrder=Asc'.format(group_id))
 #            elif item_type == 'b-user':
 #                wget_args.extend(['--warc-header', 'adobeaero-behance-user: '+item_value])
 #                wget_args.extend(['--warc-header', 'behance-user: '+item_value])
 #                wget_args.append('https://www.behance.net/'+item_value)
             elif item_type == 'asset':
                 url = 'https://' + item_value
-                wget_args.extend(['--warc-header', 'adobeaero-asset: '+url])
+                wget_args.extend(['--warc-header', 'robloxgroups-asset: '+url])
                 wget_args.append(url)
             else:
                 raise Exception('Unknown item')
