@@ -97,21 +97,9 @@ find_item = function(url)
   local value = nil
   local type_ = nil
   for pattern, name in pairs(item_patterns) do
-    local g1, g2 = string.match(url, pattern)
-    if g1 then
-      type_ = name
-      -- For endpoints that paginate via a 'cursor' query param, extract it
-      -- and return value in the form 'groupid:cursor' so the Python
-      -- pipeline can split it into group_id and cursor.
-      if name == "group-namehistory" or name == "group-members" or name == "group-wall" then
-        local cursor = ""
-        if g2 and g2 ~= "" then
-          cursor = string.match(g2, "[\?&]cursor=([^&]+)") or ""
-        end
-        value = g1 .. ":" .. cursor
-      else
-        value = g1
-      end
+    value = string.match(url, pattern)
+    type_ = name
+    if value then
       break
     end
   end
@@ -735,5 +723,4 @@ wget.callbacks.before_exit = function(exit_status, exit_status_string)
   end
   return exit_status
 end
-
 
