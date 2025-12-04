@@ -264,7 +264,7 @@ class WgetArgs(object):
             item_type, item_value = item_name.split(':', 1)
             if item_type == 'group-meta':
                 wget_args.extend(['--warc-header', 'robloxgroups-api-group: '+item_value])
-                wget_args.append('https://cc-api-cp.adobe.io/api/v2/aero/users/{}?api_key=Aero_Content_Service1'.format(item_value))
+                wget_args.append('https://groups.roblox.com/v1/groups/{}'.format(item_value))
             elif item_type == 'group-shout':
                 wget_args.extend(['--warc-header', 'robloxgroups-api-shout: '+item_value])
                 wget_args.append('https://apis.roblox.com/community-links/v1/groups/{}/shout'.format(item_value))
