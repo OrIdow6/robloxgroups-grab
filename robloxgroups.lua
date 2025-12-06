@@ -76,19 +76,19 @@ processed = function(url)
   return false
 end
 
-discover_item = function(target, item)
-  if not target[item] then
---print("discovered", item)
-    target[item] = true
-    if string.match(item, "^[a-z]+%-user:") then
-      local v = string.match(item, "^[^:]+:(.+)$")
-      discover_item(target, "api-user:" .. v)
-      discover_item(target, "b-user:" .. v)
-    end
-    return true
-  end
-  return false
-end
+-- discover_item = function(target, item)
+--   if not target[item] then
+-- --print("discovered", item)
+--     target[item] = true
+--     if string.match(item, "^[a-z]+%-user:") then
+--       local v = string.match(item, "^[^:]+:(.+)$")
+--       discover_item(target, "api-user:" .. v)
+--       discover_item(target, "b-user:" .. v)
+--     end
+--     return true
+--   end
+--   return false
+-- end
 
 find_item = function(url)
   if ids[url] then
@@ -150,8 +150,7 @@ allowed = function(url, parenturl)
   local noscheme = string.match(url, "^https?://(.*)$")
 
   if ids[url]
-    or (noscheme and ids[string.lower(noscheme)])
-    or string.match(url, "^https?://[^/]*data[^/]*%.adobe%.io/.") then
+    or (noscheme and ids[string.lower(noscheme)]) then
     return true
   end
 
@@ -175,24 +174,15 @@ allowed = function(url, parenturl)
     return false
   end
 
-  if string.match(url, "^https?://adobeaero%.app%.link/[0-9a-zA-Z]+$") then
+  if string.match(url, "^https?://[^/]*rbxcdn.com/") then
     if item_type == "asset" then
       return true
     end
     return false
   end
 
-  if string.match(url, "^https?://ar%.adobe%.com/landing/%?id=") then
-    if not parenturl
-      or string.match(parenturl, "adobeaero%.app%.link") then
-      return true
-    end
-    return false
-  end
-    
-
-  if not string.match(url, "^https?://[^/]*adobe%.io")
-    and not string.match(url, "^https?://[^/]*behance%.net/") then
+  if not string.match(url, "^https?://[^/]*roblox%.com")
+    and not string.match(url, "^https?://[^/]*rbxcdn%.com/") then
     discover_item(discovered_outlinks, string.match(percent_encode_url(url), "^([^%s]+)"))
     return false
   end
@@ -316,10 +306,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     while string.find(url_, "&amp;") do
       url_ = string.gsub(url_, "&amp;", "&")
     end
-    if string.match(url_, "^https?://cc%-api%-cp%.adobe%.io/api/v2/aero/")
-      and not string.match(url_, "[%?&]api_key=Aero_Content_Service1") then
-      url_ = set_new_params(url_, {["api_key"]="Aero_Content_Service1"})
-    end
     if not processed(url_)
       and not processed(url_ .. "/")
       and allowed(url_, origurl) then
@@ -434,112 +420,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
-  local function process_manifest(manifest, path)
-    local version = string.match(url, "([0-9]+)$")
-    path = path or ""
-    if manifest["path"] then
-      path = path .. "/" .. manifest["path"]
-    end
-    local paths = {}
-    if manifest["components"] then
-      for _, d in pairs(manifest["components"]) do
-        local new = path .. "/" .. d["path"]
-        if string.match(new, "^/") then
-          new = string.match(new, "^/(.+)$")
-        end
-        table.insert(paths, new)
-      end
-    end
-    if manifest["children"] then
-      for _, d in pairs(manifest["children"]) do
-        process_manifest(d, path)
-      end
-    end
-    for newurl, _ in pairs(context["templates"]) do
-      queue_template(newurl, join_tables(
-        context["default_params"],
-        {
-          ["version"] = version,
-          ["path"] = paths
-        }
-      ))
-    end
-  end
-
-  if allowed(url)
-    and status_code < 300
-    and item_type ~= "asset"
-    and not string.match(url, "^https?://cdn%.cp%.adobe%.io/.-/path/")
-    and not string.match(url, "^https?://cdn%.cp%.adobe%.io/content/2/dcx/[^/]+/content/[A-Z]")
-    and not string.match(url, "^https?://[^/]*data[^/]*%.adobe%.io/.") then
-    html = read_file(file)
-    if string.match(url, "/api/v2/aero/assets/[^/]-%?") then
-      json = cjson.decode(html)
-      if json["type"] ~= "application/vnd.adobe.real+dcx" then
-        error("Unsupported asset type found.")
-      end
-      context["default_params"] = {
-        ["format"] = "jpg",
-        ["dimension"] = "width",
-        ["size"] = {"0", "200", "1200"},
-        ["version"] = {}
-      }
-      for i = 0, tonumber(json["version"]) do
-        table.insert(context["default_params"]["version"], tostring(i))
-      end
-      local found_content = false
-      for _, d in pairs(json["_links"]) do
-        if string.match(d["href"], "{") then
-          context["ignore"][d["href"]] = true
-        end
-        if string.match(d["href"], "^https?://cdn%.cp%.adobe%.io/content/2/dcx/[^/]+/content$") then
-          found_content = true
-          context["templates"][d["href"] .. "/{path}"] = true
-        end
-        local newurl = string.gsub(d["href"], "/version/[0-9]+", "/version/{version}")
-        if string.match(newurl, "{")
-          and not (string.match(newurl, "{path}") and string.match(newurl, "/rendition/"))
-          and not string.match(newurl, "^https?://cdn%.cp%.adobe%.io/content/2/dcx/[^/]+/content/{path}/version/{version}$") then
-          if string.match(newurl, "{path}") then
-            context["templates"][newurl] = true
-          else
-            queue_template(newurl, context["default_params"])
-          end
-        end
-      end
-      if not found_content then
-        error("Could not find https://cdn.cp.adobe.io/content/2/dcx/[...]/content URL.")
-      end
-    end
-    if string.match(url, "/content/2/dcx/[0-9a-f%-]+/content/manifest/version/[0-9]+$") then
-      json = cjson.decode(html)
-      if json["type"] ~= "application/vnd.adobe.real+dcx" then
-        error("Found unsupported type " .. json["type"] .. ".")
-      end
-      process_manifest(json)
-    end
-    for newurl in string.gmatch(string.gsub(html, "&[qQ][uU][oO][tT];", '"'), '([^"]+)') do
-      checknewurl(newurl)
-    end
-    for newurl in string.gmatch(string.gsub(html, "&#039;", "'"), "([^']+)") do
-      checknewurl(newurl)
-    end
-    for newurl in string.gmatch(html, "[^%-]href='([^']+)'") do
-      checknewshorturl(newurl)
-    end
-    for newurl in string.gmatch(html, '[^%-]href="([^"]+)"') do
-      checknewshorturl(newurl)
-    end
-    for newurl in string.gmatch(html, ":%s*url%(([^%)]+)%)") do
-      checknewurl(newurl)
-    end
-    html = string.gsub(html, "&gt;", ">")
-    html = string.gsub(html, "&lt;", "<")
-    for newurl in string.gmatch(html, ">%s*([^<%s]+)") do
-      checknewurl(newurl)
-    end
-  end
-
   return urls
 end
 
@@ -554,23 +434,14 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     error("No item name found.")
   end
   is_initial_url = false
-  if string.match(url["url"], "^https?://cc%-api%-cp%.adobe%.io/api/v2/aero/assets/[a-f0-9%-]+%?") then
-    local html = read_file(http_stat["local_file"])
-    if not string.match(html, "/content/manifest/version/[0-9]+\"") then
-      retry_url = true
-      return false
-    end
-  end
+
   if http_stat["statcode"] ~= 200
-    and http_stat["statcode"] ~= 404
-    and (item_type == "api-asset" and http_stat["statcode"] ~= 307)
-    and (item_type == "api-user" and http_stat["statcode"] == 203) then
+    and http_stat["statcode"] ~= 404 then
     retry_url = true
     return false
   end
 
-  if http_stat["len"] == 0
-    and http_stat["statcode"] < 300 then
+  if http_stat["len"] == 0 then
     retry_url = true
     return false
   end
@@ -612,7 +483,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:flush()
     tries = tries + 1
     local maxtries = 11
-    if status_code == 401 or status_code == 403 then
+    if status_code == 429 or status_code == 500 then
       tries = maxtries + 1
     end
     if tries > maxtries then
@@ -640,17 +511,6 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     downloaded[url["url"]] = true
   end
 
-  if status_code >= 300 and status_code <= 399 then
-    local newloc = urlparse.absolute(url["url"], http_stat["newloc"])
-    if status_code == 307 and item_type == "api-asset" and not allowed(newloc) then
-      error("Data URL " .. newloc .. " should have been accepted.")
-    end
-    if processed(newloc) or not allowed(newloc, url["url"]) then
-      tries = 0
-      return wget.actions.EXIT
-    end
-  end
-
   tries = 0
 
   return wget.actions.NOTHING
@@ -665,7 +525,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
         return false
       end
       local body, code, headers, status = http.request(
-        "https://legacy-api.arpa.li/backfeed/legacy/" .. key,
+        "http://tracker/backfeed/legacy/" .. key,
         items .. "\0"
       )
       if code == 200 and body ~= nil and cjson.decode(body)["status_code"] == 200 then
@@ -688,7 +548,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
   end
   file:close()
   for key, data in pairs({
-    ["adobeaero-87q4dwdfeojnu3wr"] = discovered_items,
+    ["robloxgroups-87q4dwdfeojnu3wr"] = discovered_items,
     ["urls-han8wprk05vq9x2q"] = discovered_outlinks
   }) do
     print("queuing for", string.match(key, "^(.+)%-"))
