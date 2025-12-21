@@ -291,14 +291,16 @@ class WgetArgs(object):
                 else:
                     wget_args.append('https://groups.roblox.com/v1/groups/{}/users?limit=100&sortOrder=Asc'.format(group_id))
             elif item_type == 'group-wall':
-                group_id, cursor = item_value.split(':', 1)
                 # requests.get('https://cdn.cp.adobe.io/content/2/dcx/{}/content/manifest/version/head'.format(item_value))
                 wget_args.extend(['--warc-header', 'robloxgroups-api-wall: '+item_value])
 
-                if len(cursor) > 0:
-                    wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&cursor={cursor}&sortOrder=Asc'.format(group_id, cursor))
-                else:
-                    wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&sortOrder=Asc'.format(group_id))
+                wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&sortOrder=Asc'.format(item_value))
+            elif item_type == 'group-wall-cursored':
+                group_id, cursor = item_value.split(':', 1)
+                # requests.get('https://cdn.cp.adobe.io/content/2/dcx/{}/content/manifest/version/head'.format(item_value))
+                wget_args.extend(['--warc-header', 'robloxgroups-api-wall-cursored: '+item_value])
+
+                wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&cursor={cursor}&sortOrder=Asc'.format(group_id, cursor))
 #            elif item_type == 'b-user':
 #                wget_args.extend(['--warc-header', 'adobeaero-behance-user: '+item_value])
 #                wget_args.extend(['--warc-header', 'behance-user: '+item_value])
@@ -337,8 +339,8 @@ project = Project(
 
 pipeline = Pipeline(
     CheckIP(),
-    GetItemFromTracker('http://{}/{}/multi={}/'
-        .format(TRACKER_HOST, TRACKER_ID, MULTI_ITEM_SIZE),
+    GetItemFromTracker('http://{}/{}/'
+        .format(TRACKER_HOST, TRACKER_ID),
         downloader, VERSION),
     PrepareDirectories(warc_prefix=TRACKER_ID),
     WgetDownload(
