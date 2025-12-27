@@ -84,11 +84,7 @@ discover_item = function(target, item)
   if not target[item] then
     print("discovered", item)
     target[item] = true
-    -- if string.match(item, "^[a-z]+%-user:") then
-    --   local v = string.match(item, "^[^:]+:(.+)$")
-    --   discover_item(target, "api-user:" .. v)
-    --   discover_item(target, "b-user:" .. v)
-    -- end
+
     return true
   end
 
@@ -285,21 +281,6 @@ allowed = function(url, parenturl)
 
   return false
 end
-
--- wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_parsed, iri, verdict, reason)
---   local url = urlpos["url"]["url"]
---   local html = urlpos["link_expect_html"]
-
---   --[[if allowed(url, parent["url"])
---     and not processed(url)
---     and string.match(url, "^https://")
---     and not addedtolist[url] then
---     addedtolist[url] = true
---     return true
---   end]]
-
---   return false
--- end
 
 decode_codepoint = function(newurl)
   newurl = string.gsub(
