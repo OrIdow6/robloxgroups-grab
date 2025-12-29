@@ -217,18 +217,6 @@ set_item = function(url)
   end
 end
 
-percent_encode_url = function(url)
-  temp = ""
-  for c in string.gmatch(url, "(.)") do
-    local b = string.byte(c)
-    if b < 32 or b > 126 then
-      c = string.format("%%%02X", b)
-    end
-    temp = temp .. c
-  end
-  return temp
-end
-
 allowed = function(url, parenturl)
   local noscheme = string.match(url, "^https?://(.*)$")
 
@@ -332,27 +320,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     return string.lower(a) .. b
   end
 
-  local function set_new_params(newurl, data)
-    for param, value in pairs(data) do
-      if value == nil then
-        value = ""
-      elseif type(value) == "string" then
-        value = "=" .. value
-      end
-      if string.match(newurl, "[%?&]" .. param .. "[=&]") then
-        newurl = string.gsub(newurl, "([%?&]" .. param .. ")=?[^%?&;]*", "%1" .. value)
-      else
-        if string.match(newurl, "%?") then
-          newurl = newurl .. "&"
-        else
-          newurl = newurl .. "?"
-        end
-        newurl = newurl .. param .. value
-      end
-    end
-    return newurl
-  end
-
   local function check(newurl)
     if not string.match(newurl, "^https?://") then
       return nil
@@ -443,25 +410,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       check(urlparse.absolute(url, newurl))
     end
   end
-
-  local function get_count(data)
-    local count = 0
-    for _ in pairs(data) do
-      count = count + 1
-    end 
-    return count
-  end
-
-  local function join_tables(a, b)
-    local result = {}
-    for _, t in pairs({a, b}) do
-      for k, v in pairs(t) do
-        result[k] = v
-      end
-    end
-    return result
-  end
-
+  
   local type_ = nil
   local group_id = nil
   local itercount = 1
