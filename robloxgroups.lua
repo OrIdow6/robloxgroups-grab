@@ -410,57 +410,38 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       check(urlparse.absolute(url, newurl))
     end
   end
-  
-  local type_ = nil
-  local group_id = nil
-  local itercount = 1
-
-  for pattern, name in pairs(item_patterns) do
-    if string.match(url, pattern) and (name == "group-wall" or name == "group-wall-cursored" or name == "group-namehistory" or name == "group-namehistory-cursored" or name == "group-members" or name == "group-members-cursored" or name == "group-icon-json") then
-      type_ = name
-
-      for match in string.gmatch(url, "%d+") do
-        if itercount == 2 then
-          group_id = match
-          break
-        else
-          itercount = itercount + 1
-        end
-      end
-    end
-  end
-
-  if type_ == nil then
-    return urls
-  end
 
   local file_contents = read_file(file)
 
-  if type_ == "group-wall" or type_ == "group-wall-cursored" then
+
+  local wall_id = string.match(url, "^https?://groups%.roblox%.com/v2/groups/(%d+)/wall/posts%?")
+  if wall_id then
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
     if nextpagecursor ~= cjson.null then
-      discover_item(discovered_items, "group-wall-cursored:"..group_id..":"..nextpagecursor)
+      discover_item(discovered_items, "group-wall-cursored:"..wall_id..":"..nextpagecursor)
     end
   end
 
-  if type_ == "group-namehistory" or type_ == "group-namehistory-cursored" then
+  local namehistory_id = string.match(url, "^https?://groups%.roblox%.com/v1/groups/(%d+)/name-history%?")
+  if namehistory_id then
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
     if nextpagecursor ~= cjson.null then
-      discover_item(discovered_items, "group-namehistory-cursored:"..group_id..":"..nextpagecursor)
+      discover_item(discovered_items, "group-namehistory-cursored:"..namehistory_id..":"..nextpagecursor)
     end
   end
 
-  if type_ == "group-members" or type_ == "group-members-cursored" then
+  local members_id = string.match(url, "^https?://groups.roblox.com/v1/groups/(%d+)/users%?")
+  if members_id then
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
     if nextpagecursor ~= cjson.null then
-      discover_item(discovered_items, "group-members-cursored:"..group_id..":"..nextpagecursor)
+      discover_item(discovered_items, "group-members-cursored:"..members_id..":"..nextpagecursor)
     end
   end
 
-  if type_ == "group-icon-json" then
+  if item_type == "group-icon-json" then
     local json_data = cjson.decode(file_contents)["data"]
 
     -- The json field "data" is empty
@@ -634,6 +615,11 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
+  -- Stop 429s in testing
+  if os.getenv("DO_DEBUG") and os.getenv("DO_DEBUG") ~= "" then
+    os.execute("sleep 60")
+    return
+  end
   if killgrab then
     return wget.exits.IO_FAIL
   end
