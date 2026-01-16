@@ -265,34 +265,12 @@ class WgetArgs(object):
             if item_type == 'group-meta':
                 wget_args.extend(['--warc-header', 'robloxgroups-api-group: '+item_value])
                 wget_args.append('https://groups.roblox.com/v1/groups/{}'.format(item_value))
-            elif item_type == 'group-shout':
-                wget_args.extend(['--warc-header', 'robloxgroups-api-shout: '+item_value])
-                wget_args.append('https://apis.roblox.com/community-links/v1/groups/{}/shout'.format(item_value))
-            elif item_type == 'group-roles':
-                wget_args.extend(['--warc-header', 'robloxgroups-api-roles: '+item_value])
-                wget_args.append('https://groups.roblox.com/v1/groups/{}/roles'.format(item_value))
-            elif item_type == 'group-featuredcontent':
-                wget_args.extend(['--warc-header', 'robloxgroups-api-featuredcontent: '+item_value])
-                wget_args.append('https://groups.roblox.com/v1/featured-content/event?groupId={}'.format(item_value))
-            elif item_type == 'group-namehistory':
-                wget_args.extend(['--warc-header', 'robloxgroups-api-namehistory: '+item_value])
-                wget_args.append('https://groups.roblox.com/v1/groups/{}/name-history?limit=100&sortOrder=Asc'.format(item_value))
-            elif item_type == 'group-namehistory-cursored':
-                group_id, cursor = item_value.split(':', 1)
-                wget_args.extend(['--warc-header', 'robloxgroups-api-namehistory-cursored: '+item_value])
 
-                wget_args.append('https://groups.roblox.com/v1/groups/{}/name-history?limit=100&cursor={}&sortOrder=Asc'.format(group_id, cursor))
-            elif item_type == 'group-members':
-                wget_args.extend(['--warc-header', 'robloxgroups-api-members: '+item_value])
-                wget_args.append('https://groups.roblox.com/v1/groups/{}/users?limit=100&sortOrder=Asc'.format(item_value))
             elif item_type == 'group-members-cursored':
                 group_id, cursor = item_value.split(':', 1)
                 wget_args.extend(['--warc-header', 'robloxgroups-api-members-cursored: '+item_value])
 
                 wget_args.append('https://groups.roblox.com/v1/groups/{}/users?limit=100&cursor={}&sortOrder=Asc'.format(group_id, cursor))
-            elif item_type == 'group-wall':
-                wget_args.extend(['--warc-header', 'robloxgroups-api-wall: '+item_value])
-                wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&sortOrder=Asc'.format(item_value))
             elif item_type == 'group-wall-cursored':
                 group_id, cursor = item_value.split(':', 1)
 

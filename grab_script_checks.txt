@@ -18,32 +18,23 @@ some exact https://tr.rbxcdn.com/180DAY-43c4ca5b7577a16a01dffebc7ecd85d4/420/420
 some exact https://thumbnails.roblox.com/v1/groups/icons?groupIds=2919215&size=420x420&format=Webp&isCircular=false
 some exact https://tr.rbxcdn.com/180DAY-43c4ca5b7577a16a01dffebc7ecd85d4/420/420/Image/Webp/noFilter
 
-
-[group-shout:2919215]
 some exact https://apis.roblox.com/community-links/v1/groups/2919215/shout
-
-[group-roles:2919215]
 some exact https://groups.roblox.com/v1/groups/2919215/roles
-
-[group-featuredcontent:2919215]
 some exact https://groups.roblox.com/v1/featured-content/event?groupId=2919215
-
-[group-namehistory:2919215]
 some exact https://groups.roblox.com/v1/groups/2919215/name-history?limit=100&sortOrder=Asc
+# TODO subsequent namehistory pages
 
-# TODO namehistory-cursored
-
-[group-members:2919215]
 some exact https://groups.roblox.com/v1/groups/2919215/users?limit=100&sortOrder=Asc
 some discoveredregex group-members-cursored:2919215:eyJrZ\\S+
+
+some exact https://groups.roblox.com/v2/groups/2919215/wall/posts?limit=100&sortOrder=Asc
+some discoveredregex group-wall-cursored:2919215:\\d\\d\\S+
+
 
 [group-members-cursored:2919215:eyJrZXkiOiJpZF8yendBQUFXUjRmMDBfeEJEd2dfdzA2cUpGUUxBRDV3cDFjWW5yIiwic29ydE9yZGVyIjoiQXNjIiwicGFnaW5nRGlyZWN0aW9uIjoiRm9yd2FyZCIsInBhZ2VOdW1iZXIiOjEsImRpc2NyaW1pbmF0b3IiOiJncm91cElkOjI5MTkyMTUiLCJjb3VudCI6MTAwfQoyNDU1MGY0NjQwMmMxOWQ5ZmYzNmNhYmM2MjI2OGI4ZWRmNjk3ZDg0MWRhMmUyNzE1NWJmNzc2MzJhNzQxMmQ4]
 some exact https://groups.roblox.com/v1/groups/2919215/users?limit=100&cursor=eyJrZXkiOiJpZF8yendBQUFXUjRmMDBfeEJEd2dfdzA2cUpGUUxBRDV3cDFjWW5yIiwic29ydE9yZGVyIjoiQXNjIiwicGFnaW5nRGlyZWN0aW9uIjoiRm9yd2FyZCIsInBhZ2VOdW1iZXIiOjEsImRpc2NyaW1pbmF0b3IiOiJncm91cElkOjI5MTkyMTUiLCJjb3VudCI6MTAwfQoyNDU1MGY0NjQwMmMxOWQ5ZmYzNmNhYmM2MjI2OGI4ZWRmNjk3ZDg0MWRhMmUyNzE1NWJmNzc2MzJhNzQxMmQ4&sortOrder=Asc
 some discoveredregex group-members-cursored:2919215:eyJrZ\\S+
 
-[group-wall:2919215]
-some exact https://groups.roblox.com/v2/groups/2919215/wall/posts?limit=100&sortOrder=Asc
-some discoveredregex group-wall-cursored:2919215:\\d\\d\\S+
 
 [group-wall-cursored:2919215:1742270083_1_d2ea62bc26c8661230df7b4d06a336b8]
 some exact https://groups.roblox.com/v2/groups/2919215/wall/posts?limit=100&cursor=1742270083_1_d2ea62bc26c8661230df7b4d06a336b8&sortOrder=Asc

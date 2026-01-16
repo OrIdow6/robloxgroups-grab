@@ -92,103 +92,34 @@ discover_item = function(target, item)
 end
 
 find_item = function(url)
-  -- https://stackoverflow.com/q/28916182
-  -- License: CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/deed.en
-  -- parseurl is slightly changed by AI
-  local function urldecode(s)
-    s = s:gsub('+', ' '):gsub('%%(%x%x)', function(h)
-      return string.char(tonumber(h, 16))
-    end)
-    return s
+  local gid = string.match(url, "^https?://groups%.roblox%.com/v1/groups/([0-9]+)")
+  if gid then
+    return {
+      type = "group-meta",
+      value = gid
+    }
   end
 
-  local function parseurl(s)
-    if not s then return {} end
-    s = tostring(s)
-    -- if a full URL was passed, use only the query portion
-    s = s:match("%?(.*)$") or s
-    -- allow zero or more leading spaces
-    s = s:match("^%s*(.*)$") or ""
-    local ans = {}
-    for k, v in s:gmatch("([^&=?]+)=([^&=?]+)") do
-      ans[k] = urldecode(v)
-    end
-    return ans
+  local members_id, members_cursor = string.match(url, "^https?://groups%.roblox%.com/v1/groups/([0-9]+)/users%?limit=100&cursor=(.*)$")
+  if members_id then
+    return {
+      type = "group-members-cursored",
+      value = members_id .. ":" .. members_cursor
+    }
   end
-  --
 
-  if ids[url] then
-    return nil
+  local wall_id, wall_cursor = string.match(url, "^https?://groups%.roblox%.com/v2/groups/([0-9]+)/wall/posts%?limit=100&cursor=(.*)$")
+  if wall_id then
+    return {
+      type = "group-wall-cursored",
+      value = wall_id .. ":" .. wall_cursor
+    }
   end
-  local value = nil
-  local type_ = nil
-  local itercount = 1
-  local group_id = nil
 
-  for pattern, name in pairs(item_patterns) do
-    if string.find(url, "cursor=") == nil then
-      for match in string.gmatch(url, "%d+") do
-        if itercount == 2 then
-          value = match
-          break
-        else
-          itercount = itercount + 1
-        end
-      end
-
-      -- Group meta is at the bottom because all items
-      -- would otherwise be constantly flagged as a meta item
-      if string.find(url, "community%-links") ~= nil then
-        type_ = "group-shout"
-      elseif string.find(url, "roles") ~= nil then
-        type_ = "group-roles"
-      elseif string.find(url, "featured%-content") ~= nil then
-        type_ = "group-featuredcontent"
-      elseif string.find(url, "name%-history") ~= nil then
-        type_ = "group-namehistory"
-      elseif string.find(url, "users") ~= nil then
-        type_ = "group-members"
-      elseif string.find(url, "wall") ~= nil then
-        type_ = "group-wall"
-      elseif string.find(url, "groups") ~= nil then
-        type_ = "group-meta"
-      end
-    elseif string.find(url, "cursor=") ~= nil then
-      if string.find(url, "name%-history") ~= nil then
-        type_ = "group-namehistory-cursored"
-      elseif string.find(url, "users") ~= nil then
-        type_ = "group-members-cursored"
-      elseif string.find(url, "wall") ~= nil then
-        type_ = "group-wall-cursored"
-      end
-
-      for match in string.gmatch(url, "%d+") do
-        if itercount == 2 then
-          group_id = match
-          break
-        else
-          itercount = itercount + 1
-        end
-      end
-
-      value = group_id..":"..parseurl(url).cursor
-    end
-
-    if value then
-      break
-    end
-  end
 
   -- testing
   -- io.stdout:write("item is "..type_..":"..value.."\n")
   -- io.stdout:flush()
-
-  if value and type_ then
-    return {
-      ["value"]=value,
-      ["type"]=type_
-    }
-  end
 end
 
 set_item = function(url)
@@ -224,21 +155,6 @@ allowed = function(url, parenturl)
 
   if context["ignore"][url]
     or context["ignore"][string.match(url, "^([^%?]+)")] then
-    return false
-  end
-
-  local skip = false
-  for pattern, type_ in pairs(item_patterns) do
-    match = string.match(url, pattern)
-    if match then
-      local new_item = type_ .. ":" .. match
-      if new_item ~= item_name then
-        discover_item(discovered_items, new_item)
-        skip = true
-      end
-    end
-  end
-  if skip then
     return false
   end
 
@@ -413,9 +329,17 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     check("https://thumbnails.roblox.com/v1/groups/icons?groupIds=" .. item_value .. "&size=420x420&format=Webp&isCircular=false")
     check("https://thumbnails.roblox.com/v1/groups/icons?groupIds=" .. item_value .. "&size=420x420&format=Png&isCircular=false")
 
+    -- What used to be separate initial items
+    check("https://groups.roblox.com/v1/groups/" .. item_value .. "/roles")
+    check("https://apis.roblox.com/community-links/v1/groups/" .. item_value .. "/shout")
+    check("https://groups.roblox.com/v1/featured-content/event?groupId=" .. item_value)
+    check("https://groups.roblox.com/v1/groups/" .. item_value .. "/name-history?limit=100&sortOrder=Asc")
+    check("https://groups.roblox.com/v1/groups/" .. item_value .. "/users?limit=100&sortOrder=Asc")
+    check("https://groups.roblox.com/v2/groups/" .. item_value .. "/wall/posts?limit=100&sortOrder=Asc")
+    -- TODO html
+
     if string.match(url, "^https?://thumbnails%.roblox%.com/v1/groups/icons") then
       local json_data = cjson.decode(file_contents)["data"]
-
       if #json_data > 0 then
         check(json_data[1]["imageUrl"])
       end
@@ -423,6 +347,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
   end
 
 
+  -- These apply for the initial page and the cursored versions
   local wall_id = string.match(url, "^https?://groups%.roblox%.com/v2/groups/(%d+)/wall/posts%?")
   if wall_id then
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
@@ -437,7 +362,7 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
     if nextpagecursor ~= cjson.null then
-      discover_item(discovered_items, "group-namehistory-cursored:"..namehistory_id..":"..nextpagecursor)
+      error("This has not been encountered in testing, failing for now")
     end
   end
 
