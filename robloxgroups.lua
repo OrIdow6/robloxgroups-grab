@@ -3,7 +3,6 @@ local http = require("socket.http")
 local https = require("ssl.https")
 local cjson = require("cjson")
 local utf8 = require("utf8")
-local html_entities = require("htmlEntities")
 
 local item_dir = os.getenv("item_dir")
 local warc_file_base = os.getenv("warc_file_base")
@@ -16,7 +15,6 @@ local item_user = nil
 local url_count = 0
 local tries = 0
 local downloaded = {}
-local seen_200 = {}
 local addedtolist = {}
 local abortgrab = false
 local killgrab = false
@@ -44,6 +42,8 @@ local item_patterns = {
   ["^https?://thumbnails%.roblox%.com/v1/groups/icons%?groupIds=([0-9]+)&size=420x420&format=(.*)$"]="group-icon-json",
   ["^https?://tr.rbxcdn.com(.*)$"]="group-icon-image",
 }
+
+io.stdout:setvbuf("no") -- So prints are not buffered - http://lua.2524044.n2.nabble.com/print-stdout-and-flush-td6406981.html
 
 abort_item = function(item)
   abortgrab = true
@@ -93,107 +93,34 @@ discover_item = function(target, item)
 end
 
 find_item = function(url)
-  -- https://stackoverflow.com/q/28916182
-  -- License: CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/deed.en
-  -- parseurl is slightly changed by AI
-  local function urldecode(s)
-    s = s:gsub('+', ' '):gsub('%%(%x%x)', function(h)
-      return string.char(tonumber(h, 16))
-    end)
-    return s
+  local gid = string.match(url, "^https?://groups%.roblox%.com/v1/groups/([0-9]+)")
+  if gid then
+    return {
+      type = "group-meta",
+      value = gid
+    }
   end
 
-  local function parseurl(s)
-    if not s then return {} end
-    s = tostring(s)
-    -- if a full URL was passed, use only the query portion
-    s = s:match("%?(.*)$") or s
-    -- allow zero or more leading spaces
-    s = s:match("^%s*(.*)$") or ""
-    local ans = {}
-    for k, v in s:gmatch("([^&=?]+)=([^&=?]+)") do
-      ans[k] = urldecode(v)
-    end
-    return ans
+  local members_id, members_cursor = string.match(url, "^https?://groups%.roblox%.com/v1/groups/([0-9]+)/users%?limit=100&cursor=(.*)$")
+  if members_id then
+    return {
+      type = "group-members-cursored",
+      value = members_id .. ":" .. members_cursor
+    }
   end
-  --
 
-  if ids[url] then
-    return nil
+  local wall_id, wall_cursor = string.match(url, "^https?://groups%.roblox%.com/v2/groups/([0-9]+)/wall/posts%?limit=100&cursor=(.*)$")
+  if wall_id then
+    return {
+      type = "group-wall-cursored",
+      value = wall_id .. ":" .. wall_cursor
+    }
   end
-  local value = nil
-  local type_ = nil
-  local itercount = 1
-  local group_id = nil
 
-  for pattern, name in pairs(item_patterns) do
-    if string.find(url, "cursor=") == nil then
-      for match in string.gmatch(url, "%d+") do
-        if itercount == 2 then
-          value = match
-          break
-        else
-          itercount = itercount + 1
-        end
-      end
-
-      -- Group meta is at the bottom because all items
-      -- would otherwise be constantly flagged as a meta item
-      if string.find(url, "community%-links") ~= nil then
-        type_ = "group-shout"
-      elseif string.find(url, "roles") ~= nil then
-        type_ = "group-roles"
-      elseif string.find(url, "featured%-content") ~= nil then
-        type_ = "group-featuredcontent"
-      elseif string.find(url, "name%-history") ~= nil then
-        type_ = "group-namehistory"
-      elseif string.find(url, "users") ~= nil then
-        type_ = "group-members"
-      elseif string.find(url, "wall") ~= nil then
-        type_ = "group-wall"
-      elseif string.find(url, "thumbnails") ~= nil then
-        type_ = "group-icon-json"
-      elseif string.find(url, "rbxcdn") ~= nil then
-        type_ = "group-icon-image"
-      elseif string.find(url, "groups") ~= nil then
-        type_ = "group-meta"
-      end
-    elseif string.find(url, "cursor=") ~= nil then
-      if string.find(url, "name%-history") ~= nil then
-        type_ = "group-namehistory-cursored"
-      elseif string.find(url, "users") ~= nil then
-        type_ = "group-members-cursored"
-      elseif string.find(url, "wall") ~= nil then
-        type_ = "group-wall-cursored"
-      end
-
-      for match in string.gmatch(url, "%d+") do
-        if itercount == 2 then
-          group_id = match
-          break
-        else
-          itercount = itercount + 1
-        end
-      end
-
-      value = group_id..":"..parseurl(url).cursor
-    end
-
-    if value then
-      break
-    end
-  end
 
   -- testing
   -- io.stdout:write("item is "..type_..":"..value.."\n")
   -- io.stdout:flush()
-
-  if value and type_ then
-    return {
-      ["value"]=value,
-      ["type"]=type_
-    }
-  end
 end
 
 set_item = function(url)
@@ -219,18 +146,6 @@ set_item = function(url)
   end
 end
 
-percent_encode_url = function(url)
-  temp = ""
-  for c in string.gmatch(url, "(.)") do
-    local b = string.byte(c)
-    if b < 32 or b > 126 then
-      c = string.format("%%%02X", b)
-    end
-    temp = temp .. c
-  end
-  return temp
-end
-
 allowed = function(url, parenturl)
   local noscheme = string.match(url, "^https?://(.*)$")
 
@@ -244,32 +159,16 @@ allowed = function(url, parenturl)
     return false
   end
 
-  local skip = false
-  for pattern, type_ in pairs(item_patterns) do
-    match = string.match(url, pattern)
-    if match then
-      local new_item = type_ .. ":" .. match
-      if new_item ~= item_name then
-        discover_item(discovered_items, new_item)
-        skip = true
-      end
-    end
-  end
-  if skip then
-    return false
-  end
-
   if string.match(url, "^https?://[^/]*rbxcdn.com/") then
-    if item_type == "group-icon-image" then
-      return true
-    end
-    return false
+    return item_type == "group-meta"
   end
 
   if not string.match(url, "^https?://[^/]*roblox%.com")
-    and not string.match(url, "^https?://[^/]*rbxcdn%.com/") then
+          and not string.match(url, "^https?://[^/]*rbxcdn%.com/") then
     discover_item(discovered_outlinks, string.match(percent_encode_url(url), "^([^%s]+)"))
     return false
+  else
+    return true
   end
 
   for _, pattern in pairs({
@@ -332,27 +231,6 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
     local a, b = string.match(newurl, "^(https?://[^/]+/)(.*)$")
     return string.lower(a) .. b
-  end
-
-  local function set_new_params(newurl, data)
-    for param, value in pairs(data) do
-      if value == nil then
-        value = ""
-      elseif type(value) == "string" then
-        value = "=" .. value
-      end
-      if string.match(newurl, "[%?&]" .. param .. "[=&]") then
-        newurl = string.gsub(newurl, "([%?&]" .. param .. ")=?[^%?&;]*", "%1" .. value)
-      else
-        if string.match(newurl, "%?") then
-          newurl = newurl .. "&"
-        else
-          newurl = newurl .. "?"
-        end
-        newurl = newurl .. param .. value
-      end
-    end
-    return newurl
   end
 
   local function check(newurl)
@@ -446,131 +324,66 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
     end
   end
 
-  local function get_count(data)
-    local count = 0
-    for _ in pairs(data) do
-      count = count + 1
-    end 
-    return count
-  end
-
-  local function join_tables(a, b)
-    local result = {}
-    for _, t in pairs({a, b}) do
-      for k, v in pairs(t) do
-        result[k] = v
-      end
-    end
-    return result
-  end
-
-  local function queue_template(newurl, data)
-    local found = false
-    for k, v in pairs(data) do
-      local newdata = join_tables(data, {})
-      if v then
-        newdata[k] = nil
-        found = true
-      end
-      if type(v) == "string" then
-        v = string.gsub(v, "([^0-9a-zA-Z])", "%%%1")
-        queue_template(string.gsub(newurl, "{" .. k .. "}", v), newdata)
-      elseif type(v) == "table" then
-        for _, s in pairs(v) do
-          s = string.gsub(s, "([^0-9a-zA-Z])", "%%%1")
-          queue_template(string.gsub(newurl, "{" .. k .. "}", s), newdata)
-        end
-      end
-    end
-    if not found then
-      if string.match(newurl, "{[a-z]+}") then
-        error("Template not filled on " .. newurl .. ".")
-      end
-      check(newurl)
-    end
-  end
-
-  local type_ = nil
-  local group_id = nil
-  local itercount = 1
-
-  for pattern, name in pairs(item_patterns) do
-    if string.match(url, pattern) and (name == "group-wall" or name == "group-wall-cursored" or name == "group-namehistory" or name == "group-namehistory-cursored" or name == "group-members" or name == "group-members-cursored" or name == "group-icon-json") then
-      type_ = name
-
-      for match in string.gmatch(url, "%d+") do
-        if itercount == 2 then
-          group_id = match
-          break
-        else
-          itercount = itercount + 1
-        end
-      end
-    end
-  end
-
-  if type_ == nil then
-    return urls
-  end
-
   local file_contents = read_file(file)
 
-  if type_ == "group-wall" or type_ == "group-wall-cursored" then
-    local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
-    if nextpagecursor == cjson.null then
-      return
+  if item_type == "group-meta" then
+    if string.match(url, "^https?://groups%.roblox%.com/v1/groups/([0-9]+)/?$") then
+      if status_code ~= 400 then
+        check("https://thumbnails.roblox.com/v1/groups/icons?groupIds=" ..
+            item_value .. "&size=420x420&format=Webp&isCircular=false")
+        check("https://thumbnails.roblox.com/v1/groups/icons?groupIds=" ..
+            item_value .. "&size=420x420&format=Png&isCircular=false")
+
+        -- What used to be separate initial items
+        check("https://groups.roblox.com/v1/groups/" .. item_value .. "/roles")
+        check("https://apis.roblox.com/community-links/v1/groups/" .. item_value .. "/shout")
+        check("https://groups.roblox.com/v1/featured-content/event?groupId=" .. item_value)
+        check("https://groups.roblox.com/v1/groups/" .. item_value .. "/name-history?limit=100&sortOrder=Asc")
+        check("https://groups.roblox.com/v1/groups/" .. item_value .. "/users?limit=100&sortOrder=Asc")
+        check("https://groups.roblox.com/v2/groups/" .. item_value .. "/wall/posts?limit=100&sortOrder=Asc")
+        
+        local name_cleaned = cjson.decode(file_contents)["name"]:gsub("'", ""):gsub("[^a-zA-Z0-9]+", "-"):gsub("^%-", ""):gsub("%-$", "")
+        check("https://www.roblox.com/communities/" .. item_value .. "/" .. name_cleaned)
+      else
+        assert(cjson.decode(file_contents)["errors"][1]["message"] == "Group is invalid or does not exist.")
+      end
+    elseif string.match(url, "^https?://thumbnails%.roblox%.com/v1/groups/icons") then
+      local json_data = cjson.decode(file_contents)["data"]
+      if #json_data > 0 then
+        check(json_data[1]["imageUrl"])
+      end
     end
-
-    local next_url = "https://groups.roblox.com/v2/groups/"..group_id.."/wall/posts?limit=100&cursor="..tostring(nextpagecursor).."&sortOrder=Asc"
-    table.insert(urls, { url=next_url, link_expect_html=0, link_expect_css=0, method="GET" })
-    discover_item(discovered_items, "group-wall-cursored:"..group_id..":"..nextpagecursor)
-    discover_item(discovered_outlinks, "group-wall-cursored:"..group_id..":"..nextpagecursor)
   end
 
-  if type_ == "group-namehistory" or type_ == "group-namehistory-cursored" then
+
+
+  -- These apply for the initial page and the cursored versions
+  local wall_id = string.match(url, "^https?://groups%.roblox%.com/v2/groups/(%d+)/wall/posts%?")
+  if wall_id and status_code ~= 403 and status_code ~= 429 then
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
-    if nextpagecursor == cjson.null then
-      return
+    if nextpagecursor ~= cjson.null then
+      discover_item(discovered_items, "group-wall-cursored:"..wall_id..":"..nextpagecursor)
     end
-
-    local next_url = "https://groups.roblox.com/v1/groups/"..group_id.."/name-history?limit=100&cursor="..tostring(nextpagecursor).."&sortOrder=Asc"
-    table.insert(urls, { url=next_url, link_expect_html=0, link_expect_css=0, method="GET" })
-    discover_item(discovered_items, "group-namehistory-cursored:"..group_id..":"..nextpagecursor)
-    discover_item(discovered_outlinks, "group-namehistory-cursored:"..group_id..":"..nextpagecursor)
   end
 
-  if type_ == "group-members" or type_ == "group-members-cursored" then
+  local namehistory_id = string.match(url, "^https?://groups%.roblox%.com/v1/groups/(%d+)/name-history%?")
+  if namehistory_id and status_code ~= 429 then
     local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
-    if nextpagecursor == cjson.null then
-      return
+    if nextpagecursor ~= cjson.null then
+      error("This has not been encountered in testing, failing for now")
     end
-
-    local next_url = "https://groups.roblox.com/v1/groups/"..group_id.."/users?limit=100&cursor="..tostring(nextpagecursor).."&sortOrder=Asc"
-    table.insert(urls, { url=next_url, link_expect_html=0, link_expect_css=0, method="GET" })
-    discover_item(discovered_items, "group-members-cursored:"..group_id..":"..nextpagecursor)
-    discover_item(discovered_outlinks, "group-members-cursored:"..group_id..":"..nextpagecursor)
-
-    -- testing
-    -- io.stdout:write("discovered item ".."group-members-cursored:"..group_id..":"..nextpagecursor.."\n")
-    -- io.stdout:flush()
   end
 
-  if type_ == "group-icon-json" then
-    local json_data = cjson.decode(file_contents)["data"]
+  local members_id = string.match(url, "^https?://groups.roblox.com/v1/groups/(%d+)/users%?")
+  if members_id and status_code ~= 429 then
+    local nextpagecursor = cjson.decode(file_contents)["nextPageCursor"]
 
-    -- The json field "data" is empty
-    if #json_data == 0 then
-      return
+    if nextpagecursor ~= cjson.null then
+      discover_item(discovered_items, "group-members-cursored:"..members_id..":"..nextpagecursor)
     end
-
-    local next_url = json_data[1]["imageUrl"]
-    local item_value = next_url:gsub("https?://", ""):gsub("/", "_")
-
-    table.insert(urls, { url=next_url })
-    discover_item(discovered_items, "group-icon-image:"..item_value)
   end
 
   return urls
@@ -589,7 +402,9 @@ wget.callbacks.write_to_warc = function(url, http_stat)
   is_initial_url = false
 
   if http_stat["statcode"] ~= 200
-    and http_stat["statcode"] ~= 404 then
+    and http_stat["statcode"] ~= 404
+    and http_stat["statcode"] ~= 403
+    and http_stat["statcode"] ~= 400 then
     retry_url = true
     return false
   end
@@ -635,9 +450,9 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     io.stdout:write("Server returned bad response. ")
     io.stdout:flush()
     tries = tries + 1
-    local maxtries = 11
-    if status_code == 400 or status_code == 403 or status_code == 429 or status_code == 500 then
-      tries = maxtries + 1
+    local maxtries = 4
+    if status_code == 429 then
+      maxtries = 6
     end
     if tries > maxtries then
       io.stdout:write(" Skipping.\n")
@@ -647,20 +462,17 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       return wget.actions.EXIT
     end
     local sleep_time = math.random(
-      math.floor(math.pow(2, tries-0.5)),
-      math.floor(math.pow(2, tries))
+      math.floor(math.pow(3, tries-0.5)),
+      math.floor(math.pow(3, tries))
     )
+    if status_code == 429 then
+      sleep_time = sleep_time + 700
+    end
     io.stdout:write("Sleeping " .. sleep_time .. " seconds.\n")
     io.stdout:flush()
     os.execute("sleep " .. sleep_time)
     return wget.actions.CONTINUE
   else
-    if status_code == 200 then
-      if not seen_200[url["url"]] then
-        seen_200[url["url"]] = 0
-      end
-      seen_200[url["url"]] = seen_200[url["url"]] + 1
-    end
     downloaded[url["url"]] = true
   end
 
@@ -671,6 +483,10 @@ end
 
 wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total_downloaded_bytes, total_download_time)
   local function submit_backfeed(items, key)
+    if os.getenv("DO_DEBUG") and os.getenv("DO_DEBUG") ~= "" then
+      print("Skipping submitting items for " .. key)
+      return
+    end
     local tries = 0
     local maxtries = 5
     while tries < maxtries do
@@ -701,8 +517,8 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
   end
   file:close()
   for key, data in pairs({
-    ["robloxgroups-87q4dwdfeojnu3wr"] = discovered_items,
-    ["urls-han8wprk05vq9x2q"] = discovered_outlinks
+    ["robloxgroups-asdfgh"] = discovered_items,
+    ["urls-asdfgh"] = discovered_outlinks
   }) do
     print("queuing for", string.match(key, "^(.+)%-"))
     local items = nil
@@ -728,6 +544,12 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
 end
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
+  -- Stop 429s in testing
+  if os.getenv("DO_DEBUG") and os.getenv("DO_DEBUG") ~= "" then
+    print("Sleeping to avoid the rate limit")
+    os.execute("sleep 60")
+    return
+  end
   if killgrab then
     return wget.exits.IO_FAIL
   end

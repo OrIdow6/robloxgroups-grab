@@ -1,0 +1,53 @@
+format 0
+
+[[]]
+not regex .*view-source:.*
+successful
+
+
+[group-meta:2919215]
+some exact https://groups.roblox.com/v1/groups/2919215
+#some discovered group-roles:2919215
+#some discovered group-shout:2919215
+#some discovered group-featuredcontent:2919215
+#some discovered group-namehistory:2919215
+#some discovered group-members:2919215
+#some discovered group-wall:2919215
+some exact https://thumbnails.roblox.com/v1/groups/icons?groupIds=2919215&size=420x420&format=Png&isCircular=false
+some exact https://tr.rbxcdn.com/180DAY-43c4ca5b7577a16a01dffebc7ecd85d4/420/420/Image/Png/noFilter
+some exact https://thumbnails.roblox.com/v1/groups/icons?groupIds=2919215&size=420x420&format=Webp&isCircular=false
+some exact https://tr.rbxcdn.com/180DAY-43c4ca5b7577a16a01dffebc7ecd85d4/420/420/Image/Webp/noFilter
+some exact https://www.roblox.com/communities/2919215/Sonar-Studios
+
+
+some exact https://apis.roblox.com/community-links/v1/groups/2919215/shout
+some exact https://groups.roblox.com/v1/groups/2919215/roles
+some exact https://groups.roblox.com/v1/featured-content/event?groupId=2919215
+some exact https://groups.roblox.com/v1/groups/2919215/name-history?limit=100&sortOrder=Asc
+
+some exact https://groups.roblox.com/v1/groups/2919215/users?limit=100&sortOrder=Asc
+some discoveredregex group-members-cursored:2919215:eyJrZ\\S+
+
+some exact https://groups.roblox.com/v2/groups/2919215/wall/posts?limit=100&sortOrder=Asc
+some discoveredregex group-wall-cursored:2919215:\\d\\d\\S+
+
+
+[group-members-cursored:2919215:eyJrZXkiOiJpZF8yendBQUFXUjRmMDBfeEJEd2dfdzA2cUpGUUxBRDV3cDFjWW5yIiwic29ydE9yZGVyIjoiQXNjIiwicGFnaW5nRGlyZWN0aW9uIjoiRm9yd2FyZCIsInBhZ2VOdW1iZXIiOjEsImRpc2NyaW1pbmF0b3IiOiJncm91cElkOjI5MTkyMTUiLCJjb3VudCI6MTAwfQoyNDU1MGY0NjQwMmMxOWQ5ZmYzNmNhYmM2MjI2OGI4ZWRmNjk3ZDg0MWRhMmUyNzE1NWJmNzc2MzJhNzQxMmQ4]
+some exact https://groups.roblox.com/v1/groups/2919215/users?limit=100&cursor=eyJrZXkiOiJpZF8yendBQUFXUjRmMDBfeEJEd2dfdzA2cUpGUUxBRDV3cDFjWW5yIiwic29ydE9yZGVyIjoiQXNjIiwicGFnaW5nRGlyZWN0aW9uIjoiRm9yd2FyZCIsInBhZ2VOdW1iZXIiOjEsImRpc2NyaW1pbmF0b3IiOiJncm91cElkOjI5MTkyMTUiLCJjb3VudCI6MTAwfQoyNDU1MGY0NjQwMmMxOWQ5ZmYzNmNhYmM2MjI2OGI4ZWRmNjk3ZDg0MWRhMmUyNzE1NWJmNzc2MzJhNzQxMmQ4&sortOrder=Asc
+some discoveredregex group-members-cursored:2919215:eyJrZ\\S+
+
+
+[group-wall-cursored:2919215:1742270083_1_d2ea62bc26c8661230df7b4d06a336b8]
+some exact https://groups.roblox.com/v2/groups/2919215/wall/posts?limit=100&cursor=1742270083_1_d2ea62bc26c8661230df7b4d06a336b8&sortOrder=Asc
+
+# Non-ASCII alphanumerics in name
+[group-meta:3557875]
+some exact https://www.roblox.com/communities/3557875/AME-Anime-Manga-Espa-ol
+
+# Single quotes handled specially in these
+[group-meta:4993777]
+some exact https://www.roblox.com/communities/4993777/HazretiEralps-Gang
+
+# Group that does not exist
+[group-meta:111111111]
+some exact https://groups.roblox.com/v1/groups/111111111
