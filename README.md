@@ -1,6 +1,11 @@
-# adobeaero-grab
+# robloxgroups-grab
 
-More information about the archiving project can be found on the ArchiveTeam wiki: [Adobe Aero](https://wiki.archiveteam.org/index.php?title=Adobe Aero)
+robloxgroups-grab
+=============
+This is a script you can run to grab the Roblox Groups site.
+
+
+More information about the Roblox Groups archiving project can be found on the ArchiveTeam wiki: [Roblox](https://wiki.archiveteam.org/index.php?title=Roblox#Group_Walls_(Closing_down_2025-2026))
 
 ## Donations
 
@@ -27,7 +32,7 @@ We strongly encourage you to join the IRC channel associated with this project i
 
 #### Archive Team Warrior (recommended for most users)
 
-This and other archiving projects can easily be run using the [Archive Team Warrior](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) virtual machine. Follow the [instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) for installing the Warrior, and from the web interface running at `http://localhost:8001/`, enter the nickname that you want to be shown as on the tracker. There is no registration, just pick a nickname you like. Then, select the `Adobe Aero` project in the Warrior interface.
+This and other archiving projects can easily be run using the [Archive Team Warrior](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) virtual machine. Follow the [instructions on the Archive Team wiki](https://wiki.archiveteam.org/index.php/ArchiveTeam_Warrior) for installing the Warrior, and from the web interface running at `http://localhost:8001/`, enter the nickname that you want to be shown as on the tracker. There is no registration, just pick a nickname you like. Then, select the `Roblox Groups` project in the Warrior interface.
 
 #### Project-specific Docker container (for more advanced users)
 
@@ -39,7 +44,7 @@ It is advised to use [Watchtower](https://github.com/containrrr/watchtower) to a
 
 after which the project container can be run:
 
-    docker run -d --name archiveteam --label=com.centurylinklabs.watchtower.enable=true --log-driver json-file --log-opt max-size=50m --restart=unless-stopped atdr.meo.ws/archiveteam/adobeaero-grab --concurrent 1 YOURNICKHERE
+    docker run -d --name archiveteam --label=com.centurylinklabs.watchtower.enable=true --log-driver json-file --log-opt max-size=50m --restart=unless-stopped atdr.meo.ws/archiveteam/robloxgroups-grab --concurrent 1 YOURNICKHERE
 
 Be sure to replace `YOURNICKHERE` with the nickname that you want to be shown as on the tracker. There is no registration, just pick a nickname you like.
 
