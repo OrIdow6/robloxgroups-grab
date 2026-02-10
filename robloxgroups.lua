@@ -28,21 +28,6 @@ local ids = {}
 local retry_url = false
 local is_initial_url = true
 
-local item_patterns = {
-  ["^https?://groups%.roblox%.com/v1/groups/([0-9]+)"]="group-meta",
-  ["^https?://apis%.roblox%.com/community%-links/v1/groups/([0-9]+)/shout"]="group-shout",
-  ["^https?://groups%.roblox%.com/v1/groups/([0-9]+)/roles"]="group-roles",
-  ["^https?://groups%.roblox%.com/v1/featured%-content/event%?groupId=([0-9]+)"]="group-featuredcontent",
-  ["^https?://groups%.roblox%.com/v1/groups/([0-9]+)/name%-history%?limit=100&sortOrder=Asc"]="group-namehistory",
-  ["^https?://groups%.roblox%.com/v1/groups/([0-9]+)/name%-history%?limit=100&cursor=(.*)$"]="group-namehistory-cursored", -- Needs fixing
-  ["^https?://groups%.roblox%.com/v1/groups/([0-9]+)/users%?limit=100&sortOrder=Asc"]="group-members",
-  ["^https?://groups%.roblox%.com/v1/groups/([0-9]+)/users%?limit=100&cursor=(.*)$"]="group-members-cursored", -- Needs fixing
-  ["^https?://groups%.roblox%.com/v2/groups/([0-9]+)/wall/posts%?limit=100&sortOrder=Asc"]="group-wall",
-  ["^https?://groups%.roblox%.com/v2/groups/([0-9]+)/wall/posts%?limit=100&cursor=(.*)$"]="group-wall-cursored", -- Needs fixing
-  ["^https?://thumbnails%.roblox%.com/v1/groups/icons%?groupIds=([0-9]+)&size=420x420&format=(.*)$"]="group-icon-json",
-  ["^https?://tr.rbxcdn.com(.*)$"]="group-icon-image",
-}
-
 io.stdout:setvbuf("no") -- So prints are not buffered - http://lua.2524044.n2.nabble.com/print-stdout-and-flush-td6406981.html
 
 abort_item = function(item)
@@ -165,7 +150,7 @@ allowed = function(url, parenturl)
 
   if not string.match(url, "^https?://[^/]*roblox%.com")
           and not string.match(url, "^https?://[^/]*rbxcdn%.com/") then
-    discover_item(discovered_outlinks, string.match(percent_encode_url(url), "^([^%s]+)"))
+    error("Unknown domain on URL " .. url)
     return false
   else
     return true
@@ -518,7 +503,7 @@ wget.callbacks.finish = function(start_time, end_time, wall_time, numurls, total
   file:close()
   for key, data in pairs({
     ["robloxgroups-asdfgh"] = discovered_items,
-    ["urls-asdfgh"] = discovered_outlinks
+    --["urls-asdfgh"] = discovered_outlinks
   }) do
     print("queuing for", string.match(key, "^(.+)%-"))
     local items = nil
