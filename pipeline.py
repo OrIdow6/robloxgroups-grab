@@ -80,7 +80,7 @@ VERSION = '20251130.01'
 USER_AGENT = 'Mozilla/5.0 (X11; Linux i686; rv:145.0) Gecko/20100101 Firefox/145.0'
 TRACKER_ID = 'robloxgroups'
 TRACKER_HOST = 'tracker'
-MULTI_ITEM_SIZE = 100
+MULTI_ITEM_SIZE = 1
 
 
 ###########################################################################
