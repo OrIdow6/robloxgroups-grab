@@ -269,11 +269,10 @@ class WgetArgs(object):
             elif item_type == 'group-members-cursored':
                 group_id, cursor = item_value.split(':', 1)
                 wget_args.extend(['--warc-header', 'robloxgroups-api-members-cursored: '+item_value])
-
                 wget_args.append('https://groups.roblox.com/v1/groups/{}/users?limit=100&cursor={}&sortOrder=Asc'.format(group_id, cursor))
+
             elif item_type == 'group-wall-cursored':
                 group_id, cursor = item_value.split(':', 1)
-
                 wget_args.extend(['--warc-header', 'robloxgroups-api-wall-cursored: '+item_value])
                 wget_args.append('https://groups.roblox.com/v2/groups/{}/wall/posts?limit=100&cursor={}&sortOrder=Asc'.format(group_id, cursor))
             else:
@@ -306,9 +305,9 @@ project = Project(
 
 pipeline = Pipeline(
     CheckIP(),
-    GetItemFromTracker('http://{}/{}/'
-        .format(TRACKER_HOST, TRACKER_ID),
-        downloader, VERSION),
+    GetItemFromTracker('http://{}/{}/multi={}/'
+            .format(TRACKER_HOST, TRACKER_ID, MULTI_ITEM_SIZE),
+            downloader, VERSION),
     PrepareDirectories(warc_prefix=TRACKER_ID),
     WgetDownload(
         WgetArgs(),
